@@ -2,12 +2,18 @@ import datetime
 import re
 
 from django.conf import settings
-from django.contrib.auth.models import User
+try:
+    from django.contrib.auth import get_user_model
+    UserModel = get_user_model()
+except ImportError:
+    # for django <= 1.4
+    from django.contrib.auth.models import User as UserModel
+
 from django.contrib.sites.models import Site
 from django.core import mail
 from django.core import management
 from django.test import TestCase
-from django.utils.hashcompat import sha_constructor
+from hashlib import sha256
 
 from registration.models import RegistrationProfile
 
@@ -35,7 +41,7 @@ class RegistrationModelTests(TestCase):
         activation key.
         
         """
-        new_user = User.objects.create_user(**self.user_info)
+        new_user = UserModel.objects.create_user(**self.user_info)
         profile = RegistrationProfile.objects.create_profile(new_user)
 
         self.assertEqual(RegistrationProfile.objects.count(), 1)
@@ -50,7 +56,7 @@ class RegistrationModelTests(TestCase):
         email.
         
         """
-        new_user = User.objects.create_user(**self.user_info)
+        new_user = UserModel.objects.create_user(**self.user_info)
         profile = RegistrationProfile.objects.create_profile(new_user)
         profile.send_activation_email(Site.objects.get_current())
         self.assertEqual(len(mail.outbox), 1)
@@ -124,7 +130,7 @@ class RegistrationModelTests(TestCase):
         profile = RegistrationProfile.objects.get(user=new_user)
         activated = RegistrationProfile.objects.activate_user(profile.activation_key)
 
-        self.failUnless(isinstance(activated, User))
+        self.failUnless(isinstance(activated, UserModel))
         self.assertEqual(activated.id, new_user.id)
         self.failUnless(activated.is_active)
 
@@ -145,10 +151,10 @@ class RegistrationModelTests(TestCase):
         profile = RegistrationProfile.objects.get(user=new_user)
         activated = RegistrationProfile.objects.activate_user(profile.activation_key)
 
-        self.failIf(isinstance(activated, User))
+        self.failIf(isinstance(activated, UserModel))
         self.failIf(activated)
 
-        new_user = User.objects.get(username='alice')
+        new_user = UserModel.objects.get(username='alice')
         self.failIf(new_user.is_active)
 
         profile = RegistrationProfile.objects.get(user=new_user)
@@ -183,7 +189,7 @@ class RegistrationModelTests(TestCase):
         """
         # Due to the way activation keys are constructed during
         # registration, this will never be a valid key.
-        invalid_key = sha_constructor('foo').hexdigest()
+        invalid_key = sha256('foo').hexdigest()
         self.failIf(RegistrationProfile.objects.activate_user(invalid_key))
 
     def test_expired_user_deletion(self):
@@ -203,7 +209,7 @@ class RegistrationModelTests(TestCase):
 
         RegistrationProfile.objects.delete_expired_users()
         self.assertEqual(RegistrationProfile.objects.count(), 1)
-        self.assertRaises(User.DoesNotExist, User.objects.get, username='bob')
+        self.assertRaises(UserModel.DoesNotExist, UserModel.objects.get, username='bob')
 
     def test_management_command(self):
         """
@@ -222,4 +228,4 @@ class RegistrationModelTests(TestCase):
 
         management.call_command('cleanupregistration')
         self.assertEqual(RegistrationProfile.objects.count(), 1)
-        self.assertRaises(User.DoesNotExist, User.objects.get, username='bob')
+        self.assertRaises(UserModel.DoesNotExist, UserModel.objects.get, username='bob')

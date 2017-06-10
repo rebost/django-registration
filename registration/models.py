@@ -1,17 +1,21 @@
-import datetime
 import hashlib
 import random
 import re
 
 from django.conf import settings
-from django.contrib.auth.models import User
+try:
+    from django.contrib.auth import get_user_model
+except ImportError:
+    # for django <= 1.4
+    from django.contrib.auth.models import User as UserModel
+
 from django.db import models
 from django.db import transaction
 from django.template.loader import render_to_string
 from django.utils.translation import ugettext_lazy as _
 
 try:
-    from django.utils.timezone import now as datetime_now
+    from django.utils.timezone import now as datetime_now, timedelta
 except ImportError:
     datetime_now = datetime.datetime.now
 
@@ -75,7 +79,8 @@ class RegistrationManager(models.Manager):
         user. To disable this, pass ``send_email=False``.
         
         """
-        new_user = User.objects.create_user(username, email, password)
+        UserModel = get_user_model()
+        new_user = UserModel.objects.create_user(username, email, password)
         new_user.is_active = False
         new_user.save()
 
@@ -145,6 +150,7 @@ class RegistrationManager(models.Manager):
         be deleted.
         
         """
+        UserModel = get_user_model()
         for profile in self.all():
             try:
                 if profile.activation_key_expired():
@@ -152,7 +158,7 @@ class RegistrationManager(models.Manager):
                     if not user.is_active:
                         user.delete()
                         profile.delete()
-            except User.DoesNotExist:
+            except UserModel.DoesNotExist:
                 profile.delete()
 
 class RegistrationProfile(models.Model):
@@ -173,7 +179,7 @@ class RegistrationProfile(models.Model):
     """
     ACTIVATED = u"ALREADY_ACTIVATED"
     
-    user = models.ForeignKey(User, unique=True, verbose_name=_('user'))
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, unique=True, verbose_name=_('user'))
     activation_key = models.CharField(_('activation key'), max_length=40)
     
     objects = RegistrationManager()
@@ -207,7 +213,7 @@ class RegistrationProfile(models.Model):
            method returns ``True``.
         
         """
-        expiration_date = datetime.timedelta(days=settings.ACCOUNT_ACTIVATION_DAYS)
+        expiration_date = timedelta(days=settings.ACCOUNT_ACTIVATION_DAYS)
         return self.activation_key == self.ACTIVATED or \
                (self.user.date_joined + expiration_date <= datetime_now())
     activation_key_expired.boolean = True

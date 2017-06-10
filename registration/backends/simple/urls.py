@@ -18,11 +18,15 @@ up your own URL patterns for these views instead.
 """
 
 
-from django.conf.urls.defaults import *
-from django.views.generic.simple import direct_to_template
+try:
+    from django.conf.urls import (include, patterns, url)
+except ImportError:
+    # for django <= 1.3
+    from django.conf.urls.defaults import (include, patterns, url)
 
 from registration.views import activate
 from registration.views import register
+from registration.views import RegistrationDisallowed
 
 
 urlpatterns = patterns('',
@@ -30,9 +34,6 @@ urlpatterns = patterns('',
                            register,
                            {'backend': 'registration.backends.simple.SimpleBackend'},
                            name='registration_register'),
-                       url(r'^register/closed/$',
-                           direct_to_template,
-                           {'template': 'registration/registration_closed.html'},
-                           name='registration_disallowed'),
+                       url(r'^register/closed/$', RegistrationDisallowed.as_view(), name='registration_disallowed'),
                        (r'', include('registration.auth_urls')),
                        )

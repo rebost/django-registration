@@ -1,7 +1,12 @@
 from django.conf import settings
 from django.contrib.auth import authenticate
 from django.contrib.auth import login
-from django.contrib.auth.models import User
+try:
+    from django.contrib.auth import get_user_model
+    UserModel = get_user_model()
+except ImportError:
+    # for django <= 1.4
+    from django.contrib.auth.models import User as UserModel
 
 from registration import signals
 from registration.forms import RegistrationForm
@@ -21,7 +26,7 @@ class SimpleBackend(object):
         
         """
         username, email, password = kwargs['username'], kwargs['email'], kwargs['password1']
-        User.objects.create_user(username, email, password)
+        UserModel.objects.create_user(username, email, password)
         
         # authenticate() always has to be called before login(), and
         # will return the user we just created.

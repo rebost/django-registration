@@ -2,7 +2,13 @@ import datetime
 
 from django.conf import settings
 from django.contrib import admin
-from django.contrib.auth.models import User
+try:
+    from django.contrib.auth import get_user_model
+    UserModel = get_user_model()
+except ImportError:
+    # for django <= 1.4
+    from django.contrib.auth.models import User as UserModel
+
 from django.contrib.sessions.middleware import SessionMiddleware
 from django.contrib.sites.models import Site
 from django.core import mail
@@ -256,7 +262,7 @@ class DefaultRegistrationBackendTests(TestCase):
         pattern ``registration_complete``.
 
         """
-        self.assertEqual(self.backend.post_registration_redirect(_mock_request(), User()),
+        self.assertEqual(self.backend.post_registration_redirect(_mock_request(), UserModel()),
                          ('registration_complete', (), {}))
 
     def test_registration_signal(self):
@@ -391,7 +397,7 @@ class DefaultRegistrationBackendTests(TestCase):
 
         admin_class.activate_users(_mock_request(),
                                    RegistrationProfile.objects.all())
-        self.failUnless(User.objects.get(username='alice').is_active)
+        self.failUnless(UserModel.objects.get(username='alice').is_active)
 
 
 class SimpleRegistrationBackendTests(TestCase):
@@ -498,4 +504,4 @@ class SimpleRegistrationBackendTests(TestCase):
         
         """
         self.assertRaises(NotImplementedError, self.backend.post_activation_redirect,
-                          request=_mock_request(), user=User())
+                          request=_mock_request(), user=UserModel())

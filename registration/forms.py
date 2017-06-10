@@ -4,7 +4,12 @@ Forms and validation code for user registration.
 """
 
 
-from django.contrib.auth.models import User
+try:
+    from django.contrib.auth import get_user_model
+except ImportError:
+    # for django <= 1.4
+    from django.contrib.auth.models import User as UserModel
+
 from django import forms
 from django.utils.translation import ugettext_lazy as _
 
@@ -41,14 +46,15 @@ class RegistrationForm(forms.Form):
                                 label=_("Password"))
     password2 = forms.CharField(widget=forms.PasswordInput(attrs=attrs_dict, render_value=False),
                                 label=_("Password (again)"))
-    
+
     def clean_username(self):
         """
         Validate that the username is alphanumeric and is not already
         in use.
         
         """
-        existing = User.objects.filter(username__iexact=self.cleaned_data['username'])
+        UserModel = get_user_model()
+        existing = UserModel.objects.filter(username__iexact=self.cleaned_data['username'])
         if existing.exists():
             raise forms.ValidationError(_("A user with that username already exists."))
         else:
@@ -91,7 +97,8 @@ class RegistrationFormUniqueEmail(RegistrationForm):
         site.
         
         """
-        if User.objects.filter(email__iexact=self.cleaned_data['email']):
+        UserModel = get_user_model()
+        if UserModel.objects.filter(email__iexact=self.cleaned_data['email']):
             raise forms.ValidationError(_("This email address is already in use. Please supply a different email address."))
         return self.cleaned_data['email']
 

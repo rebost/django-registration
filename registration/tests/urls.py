@@ -10,7 +10,11 @@ handled.
 
 """
 
-from django.conf.urls.defaults import *
+try:
+    from django.conf.urls import (include, patterns, url)
+except ImportError:
+    # for django <= 1.3
+    from django.conf.urls.defaults import (include, patterns, url)
 from django.views.generic.simple import direct_to_template
 
 from registration.views import activate

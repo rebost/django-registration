@@ -1,7 +1,13 @@
 import datetime
 
 from django.conf import settings
-from django.contrib.auth.models import User
+try:
+    from django.contrib.auth import get_user_model
+    UserModel = get_user_model()
+except ImportError:
+    # for django <= 1.4
+    from django.contrib.auth.models import User as UserModel
+
 from django.core import mail
 from django.core.urlresolvers import reverse
 from django.test import TestCase
@@ -177,7 +183,7 @@ class RegistrationViewTests(TestCase):
         response = self.client.get(reverse('registration_activate',
                                            kwargs={'activation_key': profile.activation_key}))
         self.assertRedirects(response, success_redirect)
-        self.failUnless(User.objects.get(username='alice').is_active)
+        self.failUnless(UserModel.objects.get(username='alice').is_active)
 
     def test_invalid_activation(self):
         """
@@ -193,7 +199,7 @@ class RegistrationViewTests(TestCase):
                                'email': 'bob@example.com',
                                'password1': 'secret',
                                'password2': 'secret'})
-        expired_user = User.objects.get(username='bob')
+        expired_user = UserModel.objects.get(username='bob')
         expired_user.date_joined = expired_user.date_joined - datetime.timedelta(days=settings.ACCOUNT_ACTIVATION_DAYS)
         expired_user.save()
 
@@ -203,7 +209,7 @@ class RegistrationViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.context['activation_key'],
                          expired_profile.activation_key)
-        self.failIf(User.objects.get(username='bob').is_active)
+        self.failIf(UserModel.objects.get(username='bob').is_active)
 
     def test_activation_success_url(self):
         """

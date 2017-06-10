@@ -7,8 +7,21 @@ Views which allow users to create and activate accounts.
 from django.shortcuts import redirect
 from django.shortcuts import render_to_response
 from django.template import RequestContext
+from django.views.generic import TemplateView
 
 from registration.backends import get_backend
+
+
+class ActivationComplete(TemplateView):
+    template_name = "registration/activation_complete.html"
+
+
+class RegistrationComplete(TemplateView):
+    template_name = "registration/registration_complete.html"
+
+
+class RegistrationDisallowed(TemplateView):
+    template_name = "registration/registration_closed.html"
 
 
 def activate(request, backend,
